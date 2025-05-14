@@ -1,26 +1,11 @@
 # values.yaml
 
-## Global Configuration
-mode: deployment  # Options: deployment, daemonset, statefulset
+## Core Configuration
+enabled: true
+mode: deployment  # Required field (daemonset|deployment|statefulset)
 nameOverride: ""
 fullnameOverride: ""
-namespaceOverride: "otel-collector"  # Target namespace
-
-## Image Configuration
-image:
-  repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
-  tag: "0.96.0"  # Latest stable version
-  pullPolicy: IfNotPresent
-  # digest: ""  # Uncomment for immutable deployments
-
-## Resource Configuration
-resources:
-  limits:
-    cpu: 1000m
-    memory: 1Gi
-  requests:
-    cpu: 200m
-    memory: 512Mi
+namespaceOverride: "otel-collector"
 
 ## Presets Configuration
 presets:
@@ -28,18 +13,25 @@ presets:
     enabled: true
     includeCollectorLogs: false
     storeCheckpoints: false
+    maxRecombineLogSize: 102400
   hostMetrics:
+    enabled: true
+  kubeletMetrics:
     enabled: true
   kubernetesAttributes:
     enabled: true
     extractAllPodLabels: false
     extractAllPodAnnotations: false
-  kubeletMetrics:
-    enabled: true
   kubernetesEvents:
     enabled: false
   clusterMetrics:
     enabled: false
+
+## ConfigMap Configuration
+configMap:
+  create: true
+  existingName: ""
+  existingPath: ""
 
 ## Collector Configuration
 config:
@@ -47,15 +39,24 @@ config:
     logging:
       loglevel: info
     otlp:
-      endpoint: "otlp-endpoint.example.com:4317"
+      endpoint: "otel-endpoint:4317"
       tls:
-        insecure: false  # Set to true for testing only
+        insecure: false
+    prometheus:
+      endpoint: "0.0.0.0:8889"
 
   receivers:
     otlp:
       protocols:
-        grpc:
-        http:
+        grpc: {}
+        http: {}
+    prometheus:
+      config:
+        scrape_configs:
+          - job_name: opentelemetry-collector
+            scrape_interval: 10s
+            static_configs:
+              - targets: ["${env:MY_POD_IP}:8888"]
 
   processors:
     batch: {}
@@ -71,37 +72,154 @@ config:
         processors: [memory_limiter, batch]
         exporters: [logging, otlp]
       metrics:
-        receivers: [otlp]
+        receivers: [otlp, prometheus]
         processors: [memory_limiter, batch]
-        exporters: [logging, otlp]
+        exporters: [logging, otlp, prometheus]
       logs:
         receivers: [otlp]
         processors: [memory_limiter, batch]
         exporters: [logging, otlp]
 
-## Service Configuration
-service:
-  type: ClusterIP
-  annotations: {}
-  ports:
-    otlp:
-      enabled: true
-      servicePort: 4317
-    otlp-http:
-      enabled: true
-      servicePort: 4318
-    metrics:
-      enabled: true
-      servicePort: 8888
+## Image Configuration
+image:
+  registry: ""
+  repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
+  tag: "0.96.0"
+  digest: ""
+  pullPolicy: IfNotPresent
 
-## Kubernetes RBAC
+imagePullSecrets: []
+
+## Command Configuration
+command:
+  name: ""
+  extraArgs: []
+
+## Service Account Configuration
 serviceAccount:
   create: true
   annotations: {}
+  name: ""
 
+## RBAC Configuration
 clusterRole:
   create: true
+  annotations: {}
+  name: ""
   rules: []
+  clusterRoleBinding:
+    annotations: {}
+    name: ""
+
+## Pod Configuration
+podSecurityContext: {}
+securityContext: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+priorityClassName: ""
+
+## Additional Containers
+extraContainers: []
+initContainers: []
+
+## Environment Configuration
+extraEnvs:
+  - name: MY_POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+extraEnvsFrom: []
+
+## Volumes Configuration
+extraVolumes: []
+extraVolumeMounts: []
+extraManifests: []
+
+## Ports Configuration
+ports:
+  otlp:
+    enabled: true
+    containerPort: 4317
+    servicePort: 4317
+    protocol: TCP
+  otlp-http:
+    enabled: true
+    containerPort: 4318
+    servicePort: 4318
+    protocol: TCP
+  metrics:
+    enabled: true
+    containerPort: 8888
+    servicePort: 8888
+    protocol: TCP
+
+## Resources Configuration
+resources:
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+
+## Lifecycle Hooks
+lifecycleHooks: {}
+
+## Probes Configuration
+livenessProbe:
+  httpGet:
+    port: 13133
+    path: /
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    port: 13133
+    path: /
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 3
+
+startupProbe: {}
+
+## Pod Metadata
+podAnnotations: {}
+podLabels: {}
+additionalLabels: {}
+
+## Network Configuration
+hostNetwork: false
+hostAliases: []
+dnsPolicy: ""
+dnsConfig: {}
+
+## Deployment Configuration
+replicaCount: 2
+revisionHistoryLimit: 10
+annotations: {}
+
+## Service Configuration
+service:
+  enabled: true
+  type: ClusterIP
+  annotations: {}
+  externalTrafficPolicy: ""
+  internalTrafficPolicy: ""
+
+## Ingress Configuration
+ingress:
+  enabled: false
+  ingressClassName: ""
+  annotations: {}
+  hosts: []
+  tls: []
+  additionalIngresses: []
 
 ## Monitoring Configuration
 podMonitor:
@@ -109,12 +227,16 @@ podMonitor:
   metricsEndpoints:
     - port: metrics
       interval: 15s
+  extraLabels: {}
 
 serviceMonitor:
   enabled: true
   metricsEndpoints:
     - port: metrics
       interval: 15s
+  extraLabels: {}
+  relabelings: []
+  metricRelabelings: []
 
 ## Autoscaling Configuration
 autoscaling:
@@ -122,22 +244,52 @@ autoscaling:
   minReplicas: 2
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
+  behavior: {}
+
+## Rollout Configuration
+rollout:
+  strategy: RollingUpdate
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 0
+
+## Prometheus Rules
+prometheusRule:
+  enabled: false
+  groups: []
+  defaultRules:
+    enabled: false
+  extraLabels: {}
+
+## StatefulSet Configuration
+statefulset:
+  volumeClaimTemplates: []
+  podManagementPolicy: "OrderedReady"
 
 ## Network Policy
 networkPolicy:
   enabled: true
-  allowIngressFrom:
-    - namespaceSelector: {}
+  annotations: {}
+  allowIngressFrom: []
+  extraIngressRules: []
+  egressRules: []
 
-## Additional Configuration
-podAnnotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/port: "8888"
-
-extraEnvs:
-  - name: MY_POD_IP
-    valueFrom:
-      fieldRef:
-        fieldPath: status.podIP
+## Advanced Features
+internalTelemetryViaOTLP:
+  endpoint: ""
+  headers: []
+  traces:
+    enabled: false
+    endpoint: ""
+    headers: []
+  metrics:
+    enabled: false
+    endpoint: ""
+    headers: []
+  logs:
+    enabled: false
+    endpoint: ""
+    headers: []
 
 useGOMEMLIMIT: true
+shareProcessNamespace: false
