@@ -1,11 +1,15 @@
-# values.yaml
-
 ## Core Configuration
 enabled: true
-mode: deployment  # Required field (daemonset|deployment|statefulset)
+mode: deployment
 nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: "otel-collector"
+
+## Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+  # maxUnavailable: 1  # optional alternative to minAvailable
 
 ## Presets Configuration
 presets:
