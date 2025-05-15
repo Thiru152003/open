@@ -1,17 +1,16 @@
-## Core Configuration
+# Core Configuration
 enabled: true
 mode: deployment
 nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: "otel-collector"
 
-## Pod Disruption Budget
+# Pod Disruption Budget
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
-  # maxUnavailable: 1  # optional alternative to minAvailable
 
-## Presets Configuration
+# Presets Configuration
 presets:
   logsCollection:
     enabled: true
@@ -31,14 +30,17 @@ presets:
   clusterMetrics:
     enabled: false
 
-## ConfigMap Configuration
+# ConfigMap Configuration
 configMap:
   create: true
   existingName: ""
   existingPath: ""
 
-## Collector Configuration
+# Collector Configuration
 config:
+  extensions:
+    health_check: {}
+
   exporters:
     logging:
       loglevel: info
@@ -70,6 +72,7 @@ config:
       spike_limit_percentage: 25
 
   service:
+    extensions: [health_check]
     pipelines:
       traces:
         receivers: [otlp]
@@ -84,7 +87,7 @@ config:
         processors: [memory_limiter, batch]
         exporters: [logging, otlp]
 
-## Image Configuration
+# Image Configuration
 image:
   registry: ""
   repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
@@ -94,18 +97,18 @@ image:
 
 imagePullSecrets: []
 
-## Command Configuration
+# Command Configuration
 command:
   name: ""
   extraArgs: []
 
-## Service Account Configuration
+# Service Account Configuration
 serviceAccount:
   create: true
   annotations: {}
   name: ""
 
-## RBAC Configuration
+# RBAC Configuration
 clusterRole:
   create: true
   annotations: {}
@@ -115,7 +118,7 @@ clusterRole:
     annotations: {}
     name: ""
 
-## Pod Configuration
+# Pod Configuration
 podSecurityContext: {}
 securityContext: {}
 nodeSelector: {}
@@ -124,11 +127,11 @@ affinity: {}
 topologySpreadConstraints: []
 priorityClassName: ""
 
-## Additional Containers
+# Additional Containers
 extraContainers: []
 initContainers: []
 
-## Environment Configuration
+# Environment Configuration
 extraEnvs:
   - name: MY_POD_IP
     valueFrom:
@@ -136,12 +139,12 @@ extraEnvs:
         fieldPath: status.podIP
 extraEnvsFrom: []
 
-## Volumes Configuration
+# Volumes Configuration
 extraVolumes: []
 extraVolumeMounts: []
 extraManifests: []
 
-## Ports Configuration
+# Ports Configuration
 ports:
   otlp:
     enabled: true
@@ -159,7 +162,7 @@ ports:
     servicePort: 8888
     protocol: TCP
 
-## Resources Configuration
+# Resources Configuration
 resources:
   limits:
     cpu: "1000m"
@@ -168,10 +171,10 @@ resources:
     cpu: "200m"
     memory: "512Mi"
 
-## Lifecycle Hooks
+# Lifecycle Hooks
 lifecycleHooks: {}
 
-## Probes Configuration
+# Probes Configuration
 livenessProbe:
   httpGet:
     port: 13133
@@ -192,23 +195,23 @@ readinessProbe:
 
 startupProbe: {}
 
-## Pod Metadata
+# Pod Metadata
 podAnnotations: {}
 podLabels: {}
 additionalLabels: {}
 
-## Network Configuration
+# Network Configuration
 hostNetwork: false
 hostAliases: []
 dnsPolicy: ""
 dnsConfig: {}
 
-## Deployment Configuration
+# Deployment Configuration
 replicaCount: 2
 revisionHistoryLimit: 10
 annotations: {}
 
-## Service Configuration
+# Service Configuration
 service:
   enabled: true
   type: ClusterIP
@@ -216,7 +219,7 @@ service:
   externalTrafficPolicy: ""
   internalTrafficPolicy: ""
 
-## Ingress Configuration
+# Ingress Configuration
 ingress:
   enabled: false
   ingressClassName: ""
@@ -225,7 +228,7 @@ ingress:
   tls: []
   additionalIngresses: []
 
-## Monitoring Configuration
+# Monitoring Configuration
 podMonitor:
   enabled: true
   metricsEndpoints:
@@ -242,7 +245,7 @@ serviceMonitor:
   relabelings: []
   metricRelabelings: []
 
-## Autoscaling Configuration
+# Autoscaling Configuration
 autoscaling:
   enabled: true
   minReplicas: 2
@@ -250,14 +253,14 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   behavior: {}
 
-## Rollout Configuration
+# Rollout Configuration
 rollout:
   strategy: RollingUpdate
   rollingUpdate:
     maxSurge: 25%
     maxUnavailable: 0
 
-## Prometheus Rules
+# Prometheus Rules
 prometheusRule:
   enabled: false
   groups: []
@@ -265,12 +268,12 @@ prometheusRule:
     enabled: false
   extraLabels: {}
 
-## StatefulSet Configuration
+# StatefulSet Configuration
 statefulset:
   volumeClaimTemplates: []
   podManagementPolicy: "OrderedReady"
 
-## Network Policy
+# Network Policy
 networkPolicy:
   enabled: true
   annotations: {}
@@ -278,7 +281,7 @@ networkPolicy:
   extraIngressRules: []
   egressRules: []
 
-## Advanced Features
+# Advanced Features
 internalTelemetryViaOTLP:
   endpoint: ""
   headers: []
