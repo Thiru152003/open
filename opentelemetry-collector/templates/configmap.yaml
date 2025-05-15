@@ -8,5 +8,5 @@ metadata:
     {{- include "opentelemetry-collector.labels" . | nindent 4 }}
 data:
   relay: |
-    {{- include "opentelemetry-collector.deploymentConfig" . | nindent 4 -}}
+    {{- toYaml .Values.config | nindent 4 }}
 {{- end }}
