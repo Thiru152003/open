@@ -122,30 +122,19 @@ config:
 
 # Image Configuration
 image:
-  registry: ""
   repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
   tag: "0.96.0"
-  digest: ""
   pullPolicy: IfNotPresent
-
-imagePullSecrets: []
-
-# Command Configuration
-command:
-  name: ""
-  extraArgs: ["--mem-ballast-size-mib=512"]
 
 # Service Account Configuration
 serviceAccount:
   create: true
-  annotations: {}
   name: "otel-collector"
+  annotations: {}
 
 # RBAC Configuration
-clusterRole:
+rbac:
   create: true
-  annotations: {}
-  name: "otel-collector"
   rules:
     - apiGroups: [""]
       resources: ["pods", "nodes", "nodes/proxy", "services", "endpoints"]
@@ -155,28 +144,23 @@ clusterRole:
       verbs: ["get", "list", "watch"]
     - nonResourceURLs: ["/metrics"]
       verbs: ["get"]
-  clusterRoleBinding:
-    annotations: {}
-    name: "otel-collector"
 
 # Pod Configuration
 podSecurityContext:
   fsGroup: 10001
   runAsUser: 10001
   runAsNonRoot: true
+
 securityContext:
   capabilities:
     drop: ["ALL"]
   readOnlyRootFilesystem: true
+
 nodeSelector: {}
 tolerations: []
 affinity: {}
 topologySpreadConstraints: []
 priorityClassName: ""
-
-# Additional Containers
-extraContainers: []
-initContainers: []
 
 # Environment Configuration
 extraEnvs:
@@ -186,7 +170,6 @@ extraEnvs:
         fieldPath: status.podIP
   - name: OTEL_RESOURCE_ATTRIBUTES
     value: "k8s.cluster.name=my-cluster,k8s.namespace.name=$(NAMESPACE)"
-extraEnvsFrom: []
 
 # Ports Configuration
 ports:
@@ -238,8 +221,8 @@ resources:
 # Probes Configuration
 livenessProbe:
   httpGet:
-    port: 13133
     path: /
+    port: 13133
   initialDelaySeconds: 15
   periodSeconds: 10
   timeoutSeconds: 1
@@ -247,8 +230,8 @@ livenessProbe:
 
 readinessProbe:
   httpGet:
-    port: 13133
     path: /
+    port: 13133
   initialDelaySeconds: 5
   periodSeconds: 10
   timeoutSeconds: 1
@@ -256,23 +239,10 @@ readinessProbe:
 
 startupProbe:
   httpGet:
-    port: 13133
     path: /
+    port: 13133
   failureThreshold: 30
   periodSeconds: 10
-
-# Pod Metadata
-podAnnotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/port: "8888"
-podLabels: {}
-additionalLabels: {}
-
-# Network Configuration
-hostNetwork: false
-hostAliases: []
-dnsPolicy: ClusterFirst
-dnsConfig: {}
 
 # Deployment Configuration
 replicaCount: 2
@@ -285,73 +255,33 @@ service:
   type: ClusterIP
   annotations: {}
   externalTrafficPolicy: ""
-  internalTrafficPolicy: Cluster
+  internalTrafficPolicy: "Cluster"
 
 # Monitoring Configuration
 podMonitor:
-  enabled: true
-  metricsEndpoints:
-    - port: metrics
-      interval: 15s
-      path: /metrics
-  extraLabels: {}
+  enabled: false
+  additionalLabels: {}
 
 serviceMonitor:
-  enabled: true
-  metricsEndpoints:
-    - port: metrics
-      interval: 15s
-      path: /metrics
-  extraLabels: {}
-  relabelings: []
-  metricRelabelings: []
+  enabled: false
+  additionalLabels: {}
+
+# Prometheus Rules Configuration
+prometheusRule:
+  enabled: false
+  additionalLabels: {}
+  groups: []
+
+# Network Policy Configuration
+networkPolicy:
+  enabled: false
+  additionalLabels: {}
 
 # Autoscaling Configuration
 autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 5
-  targetCPUUtilizationPercentage: 80
-  behavior:
-    scaleDown:
-      stabilizationWindowSeconds: 300
-      policies:
-        - type: Percent
-          value: 50
-          periodSeconds: 60
-    scaleUp:
-      stabilizationWindowSeconds: 60
-      policies:
-        - type: Percent
-          value: 20
-          periodSeconds: 60
+  enabled: false
+  additionalLabels: {}
 
-# Network Policy
-networkPolicy:
-  enabled: true
-  annotations: {}
-  allowIngressFrom:
-    - namespaceSelector:
-        matchLabels:
-          name: observability
-    - podSelector:
-        matchLabels:
-          app.kubernetes.io/name: jaeger
-  extraIngressRules: []
-  egressRules:
-    - ports:
-        - port: 14250
-          protocol: TCP
-        - port: 14268
-          protocol: TCP
-      to:
-        - namespaceSelector:
-            matchLabels:
-              name: observability
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: jaeger
-
-# Advanced Features
+# Additional Configuration
 useGOMEMLIMIT: true
 shareProcessNamespace: false
