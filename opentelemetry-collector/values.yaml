@@ -56,13 +56,11 @@ config:
       endpoint: "jaeger-collector.observability.svc.cluster.local:14250"
       tls:
         insecure: true
-      # Added retry settings
       retry_on_failure:
         enabled: true
         initial_interval: 5s
         max_interval: 30s
         max_elapsed_time: 120s
-      # Added queue settings
       sending_queue:
         enabled: true
         num_consumers: 10
@@ -129,9 +127,6 @@ image:
   tag: "0.96.0"
   digest: ""
   pullPolicy: IfNotPresent
-  # Added image pull secrets if needed
-  # pullSecrets:
-  #   - name: regcred
 
 imagePullSecrets: []
 
@@ -145,7 +140,6 @@ serviceAccount:
   create: true
   annotations: {}
   name: "otel-collector"
-  automountServiceAccountToken: true
 
 # RBAC Configuration
 clusterRole:
@@ -194,11 +188,6 @@ extraEnvs:
     value: "k8s.cluster.name=my-cluster,k8s.namespace.name=$(NAMESPACE)"
 extraEnvsFrom: []
 
-# Volumes Configuration
-extraVolumes: []
-extraVolumeMounts: []
-extraManifests: []
-
 # Ports Configuration
 ports:
   otlp:
@@ -241,13 +230,10 @@ ports:
 resources:
   limits:
     cpu: "1000m"
-    memory: "2Gi"  # Increased from 1Gi
+    memory: "2Gi"
   requests:
     cpu: "200m"
-    memory: "1Gi"  # Increased from 512Mi
-
-# Lifecycle Hooks
-lifecycleHooks: {}
+    memory: "1Gi"
 
 # Probes Configuration
 livenessProbe:
@@ -300,18 +286,6 @@ service:
   annotations: {}
   externalTrafficPolicy: ""
   internalTrafficPolicy: Cluster
-  # Added load balancer specific configs
-  loadBalancerIP: ""
-  loadBalancerSourceRanges: []
-
-# Ingress Configuration
-ingress:
-  enabled: false
-  ingressClassName: ""
-  annotations: {}
-  hosts: []
-  tls: []
-  additionalIngresses: []
 
 # Monitoring Configuration
 podMonitor:
@@ -338,7 +312,6 @@ autoscaling:
   minReplicas: 2
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
-  targetMemoryUtilizationPercentage: 80
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 300
@@ -352,26 +325,6 @@ autoscaling:
         - type: Percent
           value: 20
           periodSeconds: 60
-
-# Rollout Configuration
-rollout:
-  strategy: RollingUpdate
-  rollingUpdate:
-    maxSurge: 25%
-    maxUnavailable: 0
-
-# Prometheus Rules
-prometheusRule:
-  enabled: false
-  groups: []
-  defaultRules:
-    enabled: false
-  extraLabels: {}
-
-# StatefulSet Configuration
-statefulset:
-  volumeClaimTemplates: []
-  podManagementPolicy: "OrderedReady"
 
 # Network Policy
 networkPolicy:
@@ -400,21 +353,5 @@ networkPolicy:
               app.kubernetes.io/name: jaeger
 
 # Advanced Features
-internalTelemetryViaOTLP:
-  endpoint: ""
-  headers: []
-  traces:
-    enabled: false
-    endpoint: ""
-    headers: []
-  metrics:
-    enabled: false
-    endpoint: ""
-    headers: []
-  logs:
-    enabled: false
-    endpoint: ""
-    headers: []
-
 useGOMEMLIMIT: true
 shareProcessNamespace: false
