@@ -131,7 +131,19 @@ serviceAccount:
   create: true
   name: "otel-collector"
   annotations: {}
-  automountServiceAccountToken: true
+
+# RBAC Configuration
+rbac:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: ["pods", "nodes", "nodes/proxy", "services", "endpoints"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["extensions", "networking.k8s.io"]
+      resources: ["ingresses"]
+      verbs: ["get", "list", "watch"]
+    - nonResourceURLs: ["/metrics"]
+      verbs: ["get"]
 
 # Pod Configuration
 podSecurityContext:
@@ -248,17 +260,13 @@ service:
 # Monitoring Configuration
 podMonitor:
   enabled: false
-  labels: {}
 
 serviceMonitor:
   enabled: false
-  labels: {}
 
 # Prometheus Rules Configuration
 prometheusRule:
   enabled: false
-  labels: {}
-  groups: []
 
 # Network Policy Configuration
 networkPolicy:
@@ -275,19 +283,3 @@ autoscaling:
 # Additional Configuration
 useGOMEMLIMIT: true
 shareProcessNamespace: false
-
-# RBAC configuration (moved to proper location)
-clusterRole:
-  create: true
-  rules:
-    - apiGroups: [""]
-      resources: ["pods", "nodes", "nodes/proxy", "services", "endpoints"]
-      verbs: ["get", "list", "watch"]
-    - apiGroups: ["extensions", "networking.k8s.io"]
-      resources: ["ingresses"]
-      verbs: ["get", "list", "watch"]
-    - nonResourceURLs: ["/metrics"]
-      verbs: ["get"]
-
-clusterRoleBinding:
-  create: true
