@@ -131,19 +131,7 @@ serviceAccount:
   create: true
   name: "otel-collector"
   annotations: {}
-
-# RBAC Configuration
-rbac:
-  create: true
-  rules:
-    - apiGroups: [""]
-      resources: ["pods", "nodes", "nodes/proxy", "services", "endpoints"]
-      verbs: ["get", "list", "watch"]
-    - apiGroups: ["extensions", "networking.k8s.io"]
-      resources: ["ingresses"]
-      verbs: ["get", "list", "watch"]
-    - nonResourceURLs: ["/metrics"]
-      verbs: ["get"]
+  automountServiceAccountToken: true
 
 # Pod Configuration
 podSecurityContext:
@@ -260,28 +248,46 @@ service:
 # Monitoring Configuration
 podMonitor:
   enabled: false
-  additionalLabels: {}
+  labels: {}
 
 serviceMonitor:
   enabled: false
-  additionalLabels: {}
+  labels: {}
 
 # Prometheus Rules Configuration
 prometheusRule:
   enabled: false
-  additionalLabels: {}
+  labels: {}
   groups: []
 
 # Network Policy Configuration
 networkPolicy:
   enabled: false
-  additionalLabels: {}
 
 # Autoscaling Configuration
 autoscaling:
   enabled: false
-  additionalLabels: {}
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
 
 # Additional Configuration
 useGOMEMLIMIT: true
 shareProcessNamespace: false
+
+# RBAC configuration (moved to proper location)
+clusterRole:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: ["pods", "nodes", "nodes/proxy", "services", "endpoints"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["extensions", "networking.k8s.io"]
+      resources: ["ingresses"]
+      verbs: ["get", "list", "watch"]
+    - nonResourceURLs: ["/metrics"]
+      verbs: ["get"]
+
+clusterRoleBinding:
+  create: true
