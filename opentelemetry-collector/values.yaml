@@ -132,19 +132,6 @@ serviceAccount:
   name: "otel-collector"
   annotations: {}
 
-# RBAC Configuration
-rbac:
-  create: true
-  rules:
-    - apiGroups: [""]
-      resources: ["pods", "nodes", "nodes/proxy", "services", "endpoints"]
-      verbs: ["get", "list", "watch"]
-    - apiGroups: ["extensions", "networking.k8s.io"]
-      resources: ["ingresses"]
-      verbs: ["get", "list", "watch"]
-    - nonResourceURLs: ["/metrics"]
-      verbs: ["get"]
-
 # Pod Configuration
 podSecurityContext:
   fsGroup: 10001
