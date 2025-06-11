@@ -1,5 +1,5 @@
 # =============================================
-# OpenTelemetry Collector - Validated values.yaml
+# OpenTelemetry Collector - Validated Configuration
 # Schema-compliant with chart version 0.96.0
 # =============================================
 
@@ -13,16 +13,17 @@ namespaceOverride: "otel-collector"
 # Deployment Configuration
 replicaCount: 2
 revisionHistoryLimit: 10
-annotations: {}
+deploymentAnnotations: {}
 podAnnotations: {}
 podLabels: {}
 
-# Rollout Strategy (Critical Missing Field)
-strategy:
-  type: RollingUpdate
-  rollingUpdate:
-    maxSurge: 25%
-    maxUnavailable: 25%
+# Deployment Strategy (Corrected schema)
+deployment:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
 
 # Pod Disruption Budget
 podDisruptionBudget:
@@ -50,12 +51,6 @@ presets:
     enabled: false
 
 # ConfigMap Configuration
-configMap:
-  create: true
-  name: ""
-  annotations: {}
-
-# Collector Configuration
 config:
   extensions:
     health_check: {}
@@ -145,7 +140,7 @@ image:
   tag: "0.96.0"
   pullPolicy: IfNotPresent
 
-# Service Account Configuration
+# Service Account
 serviceAccount:
   create: true
   name: "otel-collector"
@@ -157,7 +152,7 @@ podSecurityContext:
   runAsUser: 10001
   runAsNonRoot: true
 
-securityContext:
+containerSecurityContext:
   capabilities:
     drop: ["ALL"]
   readOnlyRootFilesystem: true
@@ -204,14 +199,16 @@ service:
   enabled: true
   type: ClusterIP
   annotations: {}
+  clusterIP: ""
+  loadBalancerIP: ""
 
 # Environment Variables
 env:
-  MY_POD_IP:
+  - name: MY_POD_IP
     valueFrom:
       fieldRef:
         fieldPath: status.podIP
-  OTEL_RESOURCE_ATTRIBUTES:
+  - name: OTEL_RESOURCE_ATTRIBUTES
     value: "k8s.cluster.name=my-cluster,k8s.namespace.name=$(NAMESPACE)"
 
 # Resources
@@ -224,25 +221,30 @@ resources:
     memory: "1Gi"
 
 # Probes
-probes:
-  liveness:
-    enabled: true
-    endpoint: "/"
+livenessProbe:
+  httpGet:
+    path: /
     port: 13133
-    initialDelaySeconds: 15
-    periodSeconds: 10
-  readiness:
-    enabled: true
-    endpoint: "/"
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /
     port: 13133
-    initialDelaySeconds: 5
-    periodSeconds: 10
-  startup:
-    enabled: true
-    endpoint: "/"
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /
     port: 13133
-    failureThreshold: 30
-    periodSeconds: 10
+  failureThreshold: 30
+  periodSeconds: 10
 
 # Scheduling
 nodeSelector: {}
