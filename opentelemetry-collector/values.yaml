@@ -1,42 +1,172 @@
+# ========================
+# OpenTelemetry Collector
+# Complete values.yaml
+# ========================
+
 # Core Configuration
 enabled: true
-mode: deployment
+mode: deployment  # deployment or daemonset
 nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: "otel-collector"
 
-# Ingress Configuration
-ingress:
-  enabled: false
+# Deployment Configuration
+replicaCount: 2
+revisionHistoryLimit: 10
+annotations: {}
+podAnnotations: {}
+podLabels: {}
+
+# Rollout Strategy (Critical Missing Field)
+rollout:
+  strategy: RollingUpdate  # RollingUpdate or Recreate
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 25%
 
 # Pod Disruption Budget
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
+  maxUnavailable: ""
 
-# Presets Configuration
-presets:
-  logsCollection:
-    enabled: true
-    includeCollectorLogs: false
-    storeCheckpoints: false
-    maxRecombineLogSize: 102400
-  hostMetrics:
-    enabled: true
-  kubeletMetrics:
-    enabled: true
-  kubernetesAttributes:
-    enabled: true
-    extractAllPodLabels: false
-    extractAllPodAnnotations: false
-  kubernetesEvents:
-    enabled: false
-  clusterMetrics:
-    enabled: false
+# Image Configuration
+image:
+  repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
+  tag: "0.96.0"
+  pullPolicy: IfNotPresent
+  imagePullSecrets: []
 
-# ConfigMap Configuration
+# Service Account
+serviceAccount:
+  create: true
+  name: "otel-collector"
+  annotations: {}
+  automountServiceAccountToken: true
+
+# Pod Security
+podSecurityContext:
+  fsGroup: 10001
+  runAsUser: 10001
+  runAsNonRoot: true
+
+securityContext:
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
+
+# Resources
+resources:
+  limits:
+    cpu: "1000m"
+    memory: "2Gi"
+  requests:
+    cpu: "200m"
+    memory: "1Gi"
+
+# Probes
+livenessProbe:
+  httpGet:
+    path: /
+    port: 13133
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 13133
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /
+    port: 13133
+  failureThreshold: 30
+  periodSeconds: 10
+
+# Networking
+hostNetwork: false
+dnsPolicy: ClusterFirst
+dnsConfig: {}
+service:
+  enabled: true
+  type: ClusterIP
+  annotations: {}
+  clusterIP: ""
+  externalTrafficPolicy: ""
+  internalTrafficPolicy: "Cluster"
+  loadBalancerIP: ""
+  loadBalancerSourceRanges: []
+
+# Ports Configuration
+ports:
+  otlp:
+    enabled: true
+    containerPort: 4317
+    servicePort: 4317
+    protocol: TCP
+    hostPort: null
+  otlp-http:
+    enabled: true
+    containerPort: 4318
+    servicePort: 4318
+    protocol: TCP
+  metrics:
+    enabled: true
+    containerPort: 8888
+    servicePort: 8888
+    protocol: TCP
+  jaeger:
+    enabled: true
+    containerPort: 14250
+    servicePort: 14250
+    protocol: TCP
+  jaeger-thrift-http:
+    enabled: true
+    containerPort: 14268
+    servicePort: 14268
+    protocol: TCP
+  jaeger-thrift-compact:
+    enabled: true
+    containerPort: 6831
+    servicePort: 6831
+    protocol: UDP
+  jaeger-thrift-binary:
+    enabled: true
+    containerPort: 6832
+    servicePort: 6832
+    protocol: UDP
+
+# Environment Variables
+extraEnvs:
+  - name: MY_POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  - name: OTEL_RESOURCE_ATTRIBUTES
+    value: "k8s.cluster.name=my-cluster,k8s.namespace.name=$(NAMESPACE)"
+
+# Scheduling
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+priorityClassName: ""
+
+# ConfigMap
 configMap:
   create: true
+  name: ""
+  annotations: {}
   existingName: ""
   existingPath: ""
 
@@ -46,29 +176,7 @@ config:
     health_check: {}
     memory_ballast:
       size_mib: 512
-
-  exporters:
-    logging:
-      loglevel: debug
-    otlp:
-      endpoint: "otel-endpoint:4317"
-      tls:
-        insecure: false
-    prometheus:
-      endpoint: "0.0.0.0:8889"
-    jaeger:
-      endpoint: "jaeger-collector.observability.svc.cluster.local:14250"
-      tls:
-        insecure: true
-      retry_on_failure:
-        enabled: true
-        initial_interval: 5s
-        max_interval: 30s
-        max_elapsed_time: 120s
-      sending_queue:
-        enabled: true
-        num_consumers: 10
-        queue_size: 5000
+    # Add other extensions as needed
 
   receivers:
     otlp:
@@ -108,8 +216,30 @@ config:
       timeout: 5s
       override: false
 
+  exporters:
+    logging:
+      loglevel: debug
+    otlp:
+      endpoint: "otel-endpoint:4317"
+      tls:
+        insecure: false
+    prometheus:
+      endpoint: "0.0.0.0:8889"
+    jaeger:
+      endpoint: "jaeger-collector.observability.svc.cluster.local:14250"
+      tls:
+        insecure: true
+      retry_on_failure:
+        enabled: true
+        initial_interval: 5s
+        max_interval: 30s
+        max_elapsed_time: 120s
+      sending_queue:
+        enabled: true
+        num_consumers: 10
+        queue_size: 5000
+
   service:
-    extensions: [health_check, memory_ballast]
     pipelines:
       traces:
         receivers: [otlp, jaeger]
@@ -123,154 +253,65 @@ config:
         receivers: [otlp]
         processors: [memory_limiter, resourcedetection, batch]
         exporters: [logging]
+    extensions: [health_check, memory_ballast]
 
-# Image Configuration
-image:
-  repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
-  tag: "0.96.0"
-  pullPolicy: IfNotPresent
-
-# Service Account Configuration
-serviceAccount:
-  create: true
-  name: "otel-collector"
-  annotations: {}
-
-# Pod Configuration
-podSecurityContext:
-  fsGroup: 10001
-  runAsUser: 10001
-  runAsNonRoot: true
-
-securityContext:
-  capabilities:
-    drop: ["ALL"]
-  readOnlyRootFilesystem: true
-
-nodeSelector: {}
-tolerations: []
-affinity: {}
-topologySpreadConstraints: []
-priorityClassName: ""
-
-# Environment Configuration
-extraEnvs:
-  - name: MY_POD_IP
-    valueFrom:
-      fieldRef:
-        fieldPath: status.podIP
-  - name: OTEL_RESOURCE_ATTRIBUTES
-    value: "k8s.cluster.name=my-cluster,k8s.namespace.name=$(NAMESPACE)"
-
-# Ports Configuration
-ports:
-  otlp:
+# Presets Configuration
+presets:
+  logsCollection:
     enabled: true
-    containerPort: 4317
-    servicePort: 4317
-    protocol: TCP
-  otlp-http:
+    includeCollectorLogs: false
+    storeCheckpoints: false
+    maxRecombineLogSize: 102400
+  hostMetrics:
     enabled: true
-    containerPort: 4318
-    servicePort: 4318
-    protocol: TCP
-  metrics:
+  kubeletMetrics:
     enabled: true
-    containerPort: 8888
-    servicePort: 8888
-    protocol: TCP
-  jaeger:
+  kubernetesAttributes:
     enabled: true
-    containerPort: 14250
-    servicePort: 14250
-    protocol: TCP
-  jaeger-thrift-http:
-    enabled: true
-    containerPort: 14268
-    servicePort: 14268
-    protocol: TCP
-  jaeger-thrift-compact:
-    enabled: true
-    containerPort: 6831
-    servicePort: 6831
-    protocol: UDP
-  jaeger-thrift-binary:
-    enabled: true
-    containerPort: 6832
-    servicePort: 6832
-    protocol: UDP
+    extractAllPodLabels: false
+    extractAllPodAnnotations: false
+  kubernetesEvents:
+    enabled: false
+  clusterMetrics:
+    enabled: false
 
-# Resources Configuration
-resources:
-  limits:
-    cpu: "1000m"
-    memory: "2Gi"
-  requests:
-    cpu: "200m"
-    memory: "1Gi"
-
-# Probes Configuration
-livenessProbe:
-  httpGet:
-    path: /
-    port: 13133
-  initialDelaySeconds: 15
-  periodSeconds: 10
-  timeoutSeconds: 1
-  failureThreshold: 3
-
-readinessProbe:
-  httpGet:
-    path: /
-    port: 13133
-  initialDelaySeconds: 5
-  periodSeconds: 10
-  timeoutSeconds: 1
-  failureThreshold: 3
-
-startupProbe:
-  httpGet:
-    path: /
-    port: 13133
-  failureThreshold: 30
-  periodSeconds: 10
-
-# Deployment Configuration
-replicaCount: 2
-revisionHistoryLimit: 10
-annotations: {}
-
-# Service Configuration
-service:
-  enabled: true
-  type: ClusterIP
-  annotations: {}
-  externalTrafficPolicy: ""
-  internalTrafficPolicy: "Cluster"
-
-# Monitoring Configuration
+# Monitoring
 podMonitor:
   enabled: false
+  additionalLabels: {}
+  interval: ""
+  scrapeTimeout: ""
+  relabelings: []
+  metricRelabelings: []
 
 serviceMonitor:
   enabled: false
+  additionalLabels: {}
+  interval: ""
+  scrapeTimeout: ""
+  relabelings: []
+  metricRelabelings: []
 
-# Prometheus Rules Configuration
 prometheusRule:
   enabled: false
+  additionalLabels: {}
+  rules: []
 
-# Network Policy Configuration
-networkPolicy:
-  enabled: false
-
-# Autoscaling Configuration
+# Autoscaling
 autoscaling:
   enabled: false
   minReplicas: 1
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
+  behavior: {}
 
-# Additional Configuration
+# Additional Features
 useGOMEMLIMIT: true
 shareProcessNamespace: false
+lifecycle: {}
+terminationGracePeriodSeconds: 30
+extraVolumeMounts: []
+extraVolumes: []
+extraContainers: []
+extraInitContainers: []
