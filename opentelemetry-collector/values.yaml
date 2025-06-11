@@ -5,6 +5,10 @@ nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: "otel-collector"
 
+# Ingress Configuration
+ingress:
+  enabled: false
+
 # Pod Disruption Budget
 podDisruptionBudget:
   enabled: true
